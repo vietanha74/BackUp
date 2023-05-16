@@ -42,7 +42,6 @@ public:
         mandelbrotData_.resize(height_, std::vector<cv::Vec3b>(width_));
     }
 
-
     int getIterationsSimple(long double a, long double b) {
 
         // Apply the Mandelbrot algorithm to the point
@@ -241,30 +240,47 @@ public:
         : width_(width), height_(height), xMin_(xMin), xMax_(xMax), yMin_(yMin), yMax_(yMax) {
         
         cv::namedWindow("Mandelbrot Set");
+        cv::setMouseCallback("Mandelbrot Set", &UserInterface::onMouse,this);
     }
-        //cv::setMouseCallback("Mandelbrot Set", static void onMouse(int event, int x, int y, int flags, void* userdata) {
-        //    UserInterface* ui = static_cast<UserInterface*>(userdata);
-        //    if (event == cv::EVENT_LBUTTONDOWN) {
-        //        ui->handleMouseClick(x, y);
-        //    }
-        //    else if (event == cv::EVENT_MOUSEMOVE) {
-        //        ui->handleMouseMove(x, y);
-        //    }
-        //}
 
+    UserInterface(MandelbrotSet& mandelbrotSet, ImageGenerator& imageGenerator)
+    {
+        cv::namedWindow("Mandelbrot Set");
+        cv::setMouseCallback("Mandelbrot Set", &UserInterface::onMouse, this);
+
+        mandelbrotSet_ = mandelbrotSet;
+        imageGenerator_ = imageGenerator;
+
+    }
+        
+        static void onMouse(int event, int x, int y, int flags, void* userdata)
+        {
+            UserInterface* ui = static_cast<UserInterface*>(userdata);
+            if (event == cv::EVENT_LBUTTONDOWN) {
+                ui->handleMouseClick(x, y, 0.5);
+            }
+            else if (event == cv::EVENT_RBUTTONDOWN){
+                ui->handleMouseClick(x, y, 2.0);
+            }
+            else if (event == cv::EVENT_MOUSEMOVE) {
+                ui->handleMouseMove(x, y);
+            }
+        }
+        
         void start() {
-            mandelbrotSet_.calculateMandelbrotSet();
+            
+            mandelbrotSet_.calculateMandelbrotSetThread();            
             imageGenerator_.generateImage(mandelbrotSet_.getMandelbrotData());
             imageGenerator_.displayImage();
-            //cv::setMouseCallback("Mandelbrot Set", onMouse, this);
+            ////cv::setMouseCallback("Mandelbrot Set", onMouse, this);
             cv::waitKey(0);
         }
 
-        void handleMouseClick(int x, int y) {
+        void handleMouseClick(int x, int y,double Factor) {
             double real = mapToRange(x, 0, width_ - 1, xMin_, xMax_);
             double imaginary = mapToRange(y, 0, height_ - 1, yMin_, yMax_);
 
-            double zoomFactor = 0.5;  // Adjust the zoom factor as needed
+            double zoomFactor = Factor;  // Adjust the zoom factor as needed
 
             double newWidth = (xMax_ - xMin_) * zoomFactor;
             double newHeight = (yMax_ - yMin_) * zoomFactor;
@@ -276,7 +292,7 @@ public:
             yMin_ = newCenterY - newHeight / 2.0;
             yMax_ = newCenterY + newHeight / 2.0;
 
-            mandelbrotSet_.calculateMandelbrotSet();
+            mandelbrotSet_.calculateMandelbrotSet1();
             imageGenerator_.generateImage(mandelbrotSet_.getMandelbrotData());
             imageGenerator_.displayImage();
         }
@@ -309,24 +325,14 @@ int main()
     const double xMax = 1.0;
     const double yMin = -1.5;
     const double yMax = 1.5;
-    //UserInterface ui(width, height, xMin, xMax, yMin, yMax);
-    //ui.start();
 
-    MandelbrotSet mandelbrotSet_(width, height, maxIterations, xMin, xMax, yMin, yMax);
-    ImageGenerator imageGenerator_(width, height);
+    MandelbrotSet mandelbrotSet(width, height, maxIterations, xMin, xMax, yMin, yMax);
+    ImageGenerator imageGenerator(width, height);
 
-    //auto startTime = std::chrono::high_resolution_clock::now();
-    ////Block code
-    //auto endTime = std::chrono::high_resolution_clock::now();
-    //auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime);
-    //std::cout << "Elapsed Time: " << duration.count() << " milliseconds" << std::endl;
+    UserInterface userInterface(std::ref(mandelbrotSet), std::ref(imageGenerator));
+    userInterface.start();
 
-    mandelbrotSet_.calculateMandelbrotSet1();
-    imageGenerator_.generateImage(mandelbrotSet_.getMandelbrotData());
 
-    imageGenerator_.displayImage();
-    //cv::setMouseCallback("Mandelbrot Set", onMouse, this);
-    
 
     return 0;
 }
