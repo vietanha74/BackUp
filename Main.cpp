@@ -1,6 +1,7 @@
 #include <iostream>
 #include <opencv2/opencv.hpp>
-
+#include <queue>
+#include <random>
 class ComplexNumber {
 public:
     ComplexNumber(double real = 0.0, double imaginary = 0.0)
@@ -39,6 +40,18 @@ public:
     MandelbrotSet() = default;
     MandelbrotSet(int width, int height, int maxIterations, double xMin, double xMax, double yMin, double yMax)
         : width_(width), height_(height), maxIterations_(maxIterations), xMin_(xMin), xMax_(xMax), yMin_(yMin), yMax_(yMax) {
+        mandelbrotData_.resize(height_, std::vector<cv::Vec3b>(width_));
+    }
+
+    void setData(int width, int height, int maxIterations, double xMin, double xMax, double yMin, double yMax)
+    {
+        width_ = width;
+        height_ = height;
+        maxIterations_ = maxIterations;
+        xMin_ = xMin;
+        xMax_ = xMax;
+        yMin_ = yMin;
+        yMax_ = yMax;
         mandelbrotData_.resize(height_, std::vector<cv::Vec3b>(width_));
     }
 
@@ -225,7 +238,7 @@ public:
 
     void displayImage() {
         cv::imshow("Mandelbrot Set", image_);
-        cv::waitKey(0);
+        //cv::waitKey(0);
 
     }
 private:
@@ -250,7 +263,6 @@ public:
 
         mandelbrotSet_ = mandelbrotSet;
         imageGenerator_ = imageGenerator;
-
     }
         
         static void onMouse(int event, int x, int y, int flags, void* userdata)
@@ -267,16 +279,41 @@ public:
             }
         }
         
+        void setData(int width, int height, double xMin, double xMax, double yMin, double yMax)
+        {
+            width_ = width;
+            height_ = height;
+            xMin_ = xMin;
+            xMax_ = xMax;
+            yMin_ = yMin;
+            yMax_ = yMax;
+        }
+
         void start() {
             
             mandelbrotSet_.calculateMandelbrotSetThread();            
             imageGenerator_.generateImage(mandelbrotSet_.getMandelbrotData());
             imageGenerator_.displayImage();
-            ////cv::setMouseCallback("Mandelbrot Set", onMouse, this);
-            cv::waitKey(0);
+            //cv::waitKey(0);
+
+            while (true)
+            {
+                int key = cv::waitKey(0);
+
+                if (key == 'q' || key == 'Q')
+                    break;
+
+                if (key == 'w' || key == 'W')  // Up arrow key
+                {
+                    mandelbrotSet_.calculateMandelbrotSetThread();
+                    imageGenerator_.generateImage(mandelbrotSet_.getMandelbrotData());
+                    imageGenerator_.displayImage();
+                }
+            }
         }
 
         void handleMouseClick(int x, int y,double Factor) {
+
             double real = mapToRange(x, 0, width_ - 1, xMin_, xMax_);
             double imaginary = mapToRange(y, 0, height_ - 1, yMin_, yMax_);
 
@@ -292,6 +329,7 @@ public:
             yMin_ = newCenterY - newHeight / 2.0;
             yMax_ = newCenterY + newHeight / 2.0;
 
+            mandelbrotSet_.setData(800, 600, 1000, xMin_, xMax_, yMin_, yMax_);
             mandelbrotSet_.calculateMandelbrotSet1();
             imageGenerator_.generateImage(mandelbrotSet_.getMandelbrotData());
             imageGenerator_.displayImage();
@@ -300,6 +338,8 @@ public:
         void handleMouseMove(int x, int y) {
             // Handle mouse move event if needed
         }
+        
+
 private:
     int width_;
     int height_;
@@ -312,7 +352,6 @@ private:
     double mapToRange(int value, int inputMin, int inputMax, double outputMin, double outputMax) {
         return outputMin + ((value - inputMin) / static_cast<double>(inputMax - inputMin)) * (outputMax - outputMin);
     }
-  
 };
 
 
@@ -330,6 +369,7 @@ int main()
     ImageGenerator imageGenerator(width, height);
 
     UserInterface userInterface(std::ref(mandelbrotSet), std::ref(imageGenerator));
+    userInterface.setData(width, height, xMin, xMax, yMin, yMax);
     userInterface.start();
 
 
